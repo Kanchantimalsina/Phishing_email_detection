@@ -24,3 +24,7 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Local ML model files
+detection/ml_model/
+*.pkl

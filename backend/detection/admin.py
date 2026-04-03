@@ -1,3 +1,4 @@
 from django.contrib import admin
 
-# Register your models here.
+# Detection app has no models registered yet.
+# Add model registrations here as detection data models are created.

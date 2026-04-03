@@ -21,18 +21,21 @@ load_dotenv()
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
+ML_MODEL_PATH = os.path.join(BASE_DIR, 'detection', 'ml_model', 'phishing_model.pkl')
+VECTORIZER_PATH = os.path.join(BASE_DIR, 'detection', 'ml_model', 'vectorizer.pkl')
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get('SECRET_KEY')
+SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-dev-key-change-in-production')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('DEBUG') == 'True'
+DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 
 AUTH_USER_MODEL = "users.CustomUser"
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '*.localhost']
 
 
 # Application definition
@@ -47,6 +50,8 @@ INSTALLED_APPS = [
     'rest_framework',
     'detection',
     'users',
+    'rest_framework_simplejwt',
+    'rest_framework_simplejwt.token_blacklist',
 
 ]
 
@@ -130,3 +135,39 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+}
+
+# JWT Configuration
+from datetime import timedelta
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(hours=1),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'ALGORITHM': 'HS256',
+    'SIGNING_KEY': SECRET_KEY,
+}
+
+# Development CORS policy for local frontend and browser extension integration.
+CORS_ALLOWED_ORIGINS = [
+    'http://127.0.0.1:8000',
+    'http://localhost:8000',
+    'http://127.0.0.1:3000',
+    'http://localhost:3000',
+]
+
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r'^chrome-extension://.*$',
+]
+
+# Security Settings for Deployment (update for production)
+SECURE_SSL_REDIRECT = False  # Set to True in production
+SESSION_COOKIE_SECURE = False  # Set to True in production
+CSRF_COOKIE_SECURE = False  # Set to True in production
+CSRF_TRUSTED_ORIGINS = ['http://localhost:*', 'http://127.0.0.1:*']
