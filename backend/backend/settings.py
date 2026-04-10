@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 from pathlib import Path
 import os
 from dotenv import load_dotenv
+from corsheaders.defaults import default_headers
 
 # Load environment variables from .env file
 load_dotenv()
@@ -21,8 +22,8 @@ load_dotenv()
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
-ML_MODEL_PATH = os.path.join(BASE_DIR, 'detection', 'ml_model', 'phishing_model.pkl')
-VECTORIZER_PATH = os.path.join(BASE_DIR, 'detection', 'ml_model', 'vectorizer.pkl')
+ML_MODEL_PATH = os.path.join(BASE_DIR, 'ml_model', 'phishing_model.pkl')
+VECTORIZER_PATH = os.path.join(BASE_DIR, 'ml_model', 'tfidf_vectorizer.pkl')
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
@@ -33,8 +34,6 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-dev-key-change-in-pro
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 
-AUTH_USER_MODEL = "users.CustomUser"
-
 ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '*.localhost']
 
 
@@ -42,21 +41,25 @@ ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '*.localhost']
 
 INSTALLED_APPS = [
     'django.contrib.admin',
+    'users.apps.UsersConfig',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'corsheaders',
     'rest_framework',
     'detection',
-    'users',
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
 
 ]
 
+AUTH_USER_MODEL = 'users.CustomUser'
+
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -140,7 +143,11 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework.authentication.SessionAuthentication',
         'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticated',
     ),
 }
 
@@ -160,11 +167,35 @@ CORS_ALLOWED_ORIGINS = [
     'http://localhost:8000',
     'http://127.0.0.1:3000',
     'http://localhost:3000',
+    'http://127.0.0.1:5173',
+    'http://localhost:5173',
+    'http://127.0.0.1:5174',
+    'http://localhost:5174',
+    'http://127.0.0.1:4173',
+    'http://localhost:4173',
 ]
 
+# Allow any local dev origin so Vite can change ports without breaking CORS.
 CORS_ALLOWED_ORIGIN_REGEXES = [
-    r'^chrome-extension://.*$',
+    r'^http://localhost:\d+$',
+    r'^http://127\.0\.0\.1:\d+$',
 ]
+
+CORS_ALLOW_HEADERS = list(default_headers) + ['x-phisguard-role']
+CORS_ALLOW_CREDENTIALS = True
+
+
+def _csv_env_set(name):
+    raw = os.environ.get(name, '')
+    return {item.strip().lower() for item in raw.split(',') if item.strip()}
+
+
+PHISGUARD_ANALYTICS_EXCLUDED_EMAILS = _csv_env_set('PHISGUARD_ANALYTICS_EXCLUDED_EMAILS')
+PHISGUARD_ANALYTICS_EXCLUDED_IPS = _csv_env_set('PHISGUARD_ANALYTICS_EXCLUDED_IPS')
+
+PHISGUARD_EXTENSION_ID = os.environ.get('PHISGUARD_EXTENSION_ID', '').strip()
+if PHISGUARD_EXTENSION_ID:
+    CORS_ALLOWED_ORIGINS.append(f'chrome-extension://{PHISGUARD_EXTENSION_ID}')
 
 # Security Settings for Deployment (update for production)
 SECURE_SSL_REDIRECT = False  # Set to True in production

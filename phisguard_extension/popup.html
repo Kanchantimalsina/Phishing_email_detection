@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>PhishGuard AI</title>
+	<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+	<main class="popup-wrap">
+		<header>
+			<p class="eyebrow">PhishGuard AI</p>
+			<h1>Email Threat Scan</h1>
+			<p class="sub">Hybrid rule + ML phishing verdict</p>
+		</header>
+
+		<button id="scanBtn" class="scan-btn">Scan This Email</button>
+
+		<section id="resultCard" class="result-card hidden" aria-live="polite">
+			<div class="result-top">
+				<span id="verdict" class="verdict-pill">SAFE</span>
+				<span id="riskText" class="risk-text">0%</span>
+			</div>
+
+			<div class="gauge-track">
+				<div id="gaugeFill" class="gauge-fill"></div>
+			</div>
+
+			<p class="reason-title">Reasons</p>
+			<ul id="reasonsList" class="reasons-list"></ul>
+		</section>
+
+		<p id="statusText" class="status"></p>
+
+		<a id="dashboardLink" class="dashboard-link" href="http://localhost:5173/dashboard" target="_blank" rel="noreferrer">
+			Go to Dashboard
+		</a>
+	</main>
+
+	<script src="popup.js"></script>
+</body>
+</html>

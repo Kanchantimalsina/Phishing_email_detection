@@ -1,0 +1,141 @@
+* {
+	box-sizing: border-box;
+}
+
+body {
+	margin: 0;
+	font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+	background: linear-gradient(145deg, #0f172a, #111827 45%, #0b1220);
+	color: #e2e8f0;
+}
+
+.popup-wrap {
+	width: 360px;
+	min-height: 480px;
+	padding: 16px;
+}
+
+.eyebrow {
+	margin: 0;
+	font-size: 11px;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	color: #67e8f9;
+}
+
+h1 {
+	margin: 4px 0;
+	font-size: 22px;
+	line-height: 1.2;
+}
+
+.sub {
+	margin: 0;
+	color: #94a3b8;
+	font-size: 13px;
+}
+
+.scan-btn {
+	margin-top: 14px;
+	width: 100%;
+	border: 0;
+	border-radius: 10px;
+	padding: 11px 12px;
+	font-weight: 700;
+	background: linear-gradient(90deg, #06b6d4, #22d3ee);
+	color: #082f49;
+	cursor: pointer;
+}
+
+.scan-btn:hover {
+	filter: brightness(1.05);
+}
+
+.scan-btn:disabled {
+	opacity: 0.65;
+	cursor: not-allowed;
+}
+
+.result-card {
+	margin-top: 14px;
+	padding: 12px;
+	background: rgba(15, 23, 42, 0.8);
+	border: 1px solid #334155;
+	border-radius: 10px;
+}
+
+.hidden {
+	display: none;
+}
+
+.result-top {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+}
+
+.verdict-pill {
+	font-size: 11px;
+	padding: 4px 8px;
+	border-radius: 999px;
+	background: #1e293b;
+	border: 1px solid #334155;
+}
+
+.risk-text {
+	font-weight: 700;
+	font-size: 16px;
+}
+
+.gauge-track {
+	width: 100%;
+	height: 10px;
+	border-radius: 999px;
+	background: #1e293b;
+	overflow: hidden;
+	margin-top: 10px;
+}
+
+.gauge-fill {
+	height: 100%;
+	width: 0;
+	border-radius: 999px;
+	transition: width 0.3s ease;
+}
+
+.reason-title {
+	margin: 12px 0 8px;
+	font-size: 12px;
+	font-weight: 700;
+}
+
+.reasons-list {
+	margin: 0;
+	padding-left: 16px;
+	color: #cbd5e1;
+	font-size: 12px;
+	line-height: 1.5;
+}
+
+.status {
+	min-height: 18px;
+	font-size: 12px;
+	color: #93c5fd;
+	margin-top: 10px;
+}
+
+.status.error {
+	color: #fca5a5;
+}
+
+.dashboard-link {
+	display: inline-block;
+	margin-top: 8px;
+	font-size: 12px;
+	color: #67e8f9;
+	text-decoration: none;
+}
+
+.dashboard-link:hover {
+	text-decoration: underline;
+}

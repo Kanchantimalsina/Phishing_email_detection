@@ -8,8 +8,11 @@ import os
 import joblib
 from functools import lru_cache
 from django.conf import settings
+from scipy.sparse import csr_matrix, hstack
+from sklearn.feature_extraction.text import ENGLISH_STOP_WORDS
 from rest_framework import serializers
 
+from .models import DetectionRule
 from .rules import (
     extract_urls,
     is_url_suspicious,
@@ -43,15 +46,30 @@ class EmailCheckSerializer(serializers.Serializer):
 
 
 # -----------------------------
-# TEXT CLEANING (FOR ML)
+# ML FEATURE ENGINEERING
 # -----------------------------
 
-def clean_text(text: str) -> str:
-    text = (text or "").lower()
-    text = re.sub(r"http\S+|www\S+", " URL ", text)
-    text = re.sub(r"\W", " ", text)
-    text = re.sub(r"\s+", " ", text).strip()
-    return text
+def _clean_text(text: str) -> str:
+    text = (text or '').lower()
+    text = re.sub(r'http\S+|www\S+', ' URL ', text)
+    text = re.sub(r'\W', ' ', text)
+    text = re.sub(r'\s+', ' ', text).strip()
+    words = [word for word in text.split() if word not in ENGLISH_STOP_WORDS]
+    return ' '.join(words)
+
+
+def _url_feature_row(text: str) -> list[int]:
+    urls = extract_urls(text)
+    has_https = int(any(url.startswith('https') for url in urls))
+    has_ip = int(any(re.search(r'\d+\.\d+\.\d+\.\d+', url) for url in urls))
+    suspicious_words = int(
+        any(
+            word in url.lower()
+            for word in ['login', 'verify', 'secure', 'update']
+            for url in urls
+        )
+    )
+    return [len(urls), has_https, has_ip, suspicious_words]
 
 
 # -----------------------------
@@ -63,11 +81,9 @@ def load_model():
     try:
         model_path = getattr(settings, "ML_MODEL_PATH", "")
         vectorizer_path = getattr(settings, "VECTORIZER_PATH", "")
-
         model = joblib.load(model_path) if os.path.exists(model_path) else None
         vectorizer = joblib.load(vectorizer_path) if os.path.exists(vectorizer_path) else None
-
-        return model, vectorizer, model is not None
+        return model, vectorizer, model is not None and vectorizer is not None
     except Exception:
         return None, None, False
 
@@ -79,16 +95,18 @@ def load_model():
 def get_ml_score(text: str) -> float:
     model, vectorizer, available = load_model()
 
-    if not available or not vectorizer:
+    if not available:
         return 0.0
 
     try:
-        cleaned = clean_text(text)
-        features = vectorizer.transform([cleaned])
+        cleaned_text = _clean_text(text)
+        text_features = vectorizer.transform([cleaned_text])
+        url_features = csr_matrix([_url_feature_row(text)])
+        features = hstack([text_features, url_features])
 
         if hasattr(model, "predict_proba"):
             proba = model.predict_proba(features)[0]
-            return float(proba[-1])  # phishing probability
+            return float(proba[1])
     except Exception:
         pass
 
@@ -106,8 +124,54 @@ def combine_scores(rule_score: float, ml_score: float, mode="hybrid") -> float:
     if mode == "ml":
         return ml_score if ml_score else rule_score
 
+    if ml_score <= 0:
+        return rule_score
+
     # hybrid
-    return (rule_score * 0.5) + (ml_score * 0.5)
+    return (rule_score * 0.3) + (ml_score * 0.7)
+
+
+def _apply_configurable_rules(sender: str, subject: str, body: str, urls: list[str]) -> list[dict]:
+    text = f"{subject} {body}".lower()
+    sender_l = (sender or '').lower()
+    urls_l = [url.lower() for url in urls]
+    custom_indicators = []
+
+    try:
+        active_rules = DetectionRule.objects.filter(is_active=True)
+    except Exception:
+        # During bootstrap/migration gaps, skip configurable rules gracefully.
+        return custom_indicators
+
+    for rule in active_rules:
+        pattern = (rule.pattern or '').strip().lower()
+        if not pattern:
+            continue
+
+        matched = False
+        if rule.category == 'sender':
+            matched = pattern in sender_l
+        elif rule.category == 'url':
+            matched = any(pattern in url for url in urls_l)
+        elif rule.category in ['keyword', 'attachment']:
+            matched = pattern in text
+        else:
+            matched = pattern in text or pattern in sender_l or any(pattern in url for url in urls_l)
+
+        if not matched:
+            continue
+
+        custom_indicators.append(
+            {
+                'category': rule.category,
+                'description': rule.description or f'Configurable rule matched: {rule.name}',
+                'severity': rule.severity,
+                'weight': rule.weight,
+                'value': pattern,
+            }
+        )
+
+    return custom_indicators
 
 
 # MAIN ANALYSIS FUNCTION
@@ -137,6 +201,7 @@ def analyze_email(sender=None, subject=None, body=None, mode="hybrid"):
             })
 
     indicators += check_attachments(body)
+    indicators += _apply_configurable_rules(sender, subject, body, urls)
 
     # Limit indicators (UI-friendly)
     indicators = indicators[:15]
@@ -156,6 +221,7 @@ def analyze_email(sender=None, subject=None, body=None, mode="hybrid"):
 
     # 6. Recommendations
     recommendations = get_recommendations(verdict, indicators)
+    reasons = [ind.get("description", "") for ind in indicators if ind.get("description")]
 
     return {
         "verdict": verdict,
@@ -164,6 +230,7 @@ def analyze_email(sender=None, subject=None, body=None, mode="hybrid"):
         "ml_confidence": round(ml_confidence, 4),
         "analysis_mode": mode,
         "indicators": indicators,
+        "reasons": reasons,
         "recommendations": recommendations,
         "urls_found": urls[:20],
     }

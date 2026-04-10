@@ -135,10 +135,12 @@ def check_urgent_keywords(body: str, subject: str) -> list[dict]:
 
     if found_keywords:
         severity = 'high' if len(found_keywords) >= 3 else 'medium' if len(found_keywords) >= 1 else 'low'
+        weight = min(10 + (len(found_keywords) - 1) * 5, 30)
         indicators.append({
             'category': 'keyword',
             'description': f'Urgent/manipulative language detected: {", ".join(found_keywords[:5])}',
             'severity': severity,
+            'weight': weight,
             'value': ', '.join(found_keywords[:5]),
         })
     return indicators
@@ -163,7 +165,7 @@ def calculate_rule_score(indicators: list[dict]) -> float:
     severity_weights = {'high': 20, 'medium': 10, 'low': 5}
     score = 0
     for ind in indicators:
-        score += severity_weights.get(ind.get('severity', 'low'), 5)
+        score += ind.get('weight', severity_weights.get(ind.get('severity', 'low'), 5))
     return float(min(score, 100))
 
 

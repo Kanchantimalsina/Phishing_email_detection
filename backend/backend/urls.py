@@ -25,7 +25,6 @@ def api_root(request):
         {
             'message': 'Phishing email detection backend is running.',
             'endpoints': {
-                'users': '/api/users/',
                 'detection': '/api/detection/',
             },
         }
@@ -34,6 +33,5 @@ def api_root(request):
 urlpatterns = [
     path('', api_root, name='api-root'),
     path('admin/', admin.site.urls),
-    path('api/users/', include('users.urls')),
     path('api/detection/', include('detection.urls')),
 ]

@@ -1,0 +1,31 @@
+{
+	"manifest_version": 3,
+	"name": "PhishGuard AI",
+	"version": "1.0.0",
+	"description": "Scan Gmail and Outlook emails for phishing using a hybrid AI engine.",
+	"permissions": ["storage", "activeTab", "tabs", "scripting"],
+	"host_permissions": [
+		"https://mail.google.com/*",
+		"https://outlook.office.com/*",
+		"https://outlook.office365.com/*",
+		"https://outlook.live.com/*",
+		"http://127.0.0.1:8000/*",
+		"http://localhost:8000/*"
+	],
+	"action": {
+		"default_title": "PhishGuard AI",
+		"default_popup": "popup.html"
+	},
+	"content_scripts": [
+		{
+			"matches": [
+				"https://mail.google.com/*",
+				"https://outlook.office.com/*",
+				"https://outlook.office365.com/*",
+				"https://outlook.live.com/*"
+			],
+			"js": ["content.js"],
+			"run_at": "document_idle"
+		}
+	]
+}

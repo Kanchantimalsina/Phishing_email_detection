@@ -125,71 +125,20 @@ python manage.py runserver
 
 ## API Endpoints
 
-### Authentication
+### Authentication & Access Model
 
-**Register:**
-```
-POST /api/users/register/
-Body: {
-  "email": "user@example.com",
-  "username": "username",
-  "full_name": "Full Name",
-  "password": "StrongPass123!",
-  "password2": "StrongPass123!"
-}
-```
+- Django admin login: `http://127.0.0.1:8000/admin/login/`
+- Admin API access: authenticated staff/superuser session or authenticated JWT user with admin privileges
+- Analyst API access: authenticated user in `analyst` group or admin/staff user
+- Public endpoints (`analyze`, `history`, `detail`, `stats`) do not require authentication
 
-**Login:**
-```
-POST /api/users/login/
-Body: {
-  "email": "user@example.com",
-  "password": "StrongPass123!"
-}
-Response: {
-  "access": "JWT_TOKEN",
-  "refresh": "REFRESH_TOKEN",
-  "user": {...}
-}
-```
-
-**Logout:**
-```
-POST /api/users/logout/
-Headers: Authorization: Bearer JWT_TOKEN
-Body: {"refresh": "REFRESH_TOKEN"}
-```
-
-**Get/Update Profile:**
-```
-GET /api/users/profile/
-PUT /api/users/profile/
-Headers: Authorization: Bearer JWT_TOKEN
-```
-
-**Refresh Token:**
-```
-POST /api/users/token/refresh/
-Body: {"refresh": "REFRESH_TOKEN"}
-Response: {"access": "NEW_JWT_TOKEN"}
-```
+> Note: `/api/users/*` endpoints are not part of this backend currently.
 
 ### Detection
-
-**Check Health:**
-```
-GET /api/detection/health/
-Response: {
-  "status": "ok" | "warning",
-  "model_available": true/false,
-  "model_name": "phishing_model.pkl"
-}
-```
 
 **Predict Phishing:**
 ```
 POST /api/detection/predict/
-Headers: Authorization: Bearer JWT_TOKEN
 Body: {
   "email_text": "full email text",
   OR
@@ -198,16 +147,68 @@ Body: {
   "email_body": "Email body text"
 }
 Response: {
-  "prediction": "phishing" | "safe",
-  "is_phishing": true/false,
+  "id": 1,
+  "sender_email": "sender@example.com",
+  "subject": "Subject line",
+  "email_body": "Email body text",
+  "source": "manual",
+  "verdict": "phishing" | "suspicious" | "safe",
   "risk_score": 75,
-  "risk_level": "High Risk" | "Medium Risk" | "Low Risk",
-  "source": "rules" | "rules+ml" | "rules-fallback",
-  "matched_rules": [{"reason": "...", "score": 12}],
-  "probability": 0.92,
-  "model_name": "phishing_model.pkl",
-  "model_available": true
+  "rule_score": 60,
+  "ml_confidence": 0.82,
+  "analysis_mode": "hybrid",
+  "indicators": [...],
+  "recommendations": [...],
+  "urls_found": [...],
+  "analyzed_at": "2026-04-04T12:34:56Z"
 }
+```
+
+**Get Analysis History:**
+```
+GET /api/detection/history/
+Query: ?page=1&page_size=50
+Response: {
+  "count": 123,
+  "page": 1,
+  "page_size": 50,
+  "has_next": true,
+  "results": [...]
+}
+```
+
+**Get Analysis Detail:**
+```
+GET /api/detection/history/{id}/
+```
+
+**Get Dashboard Stats:**
+```
+GET /api/detection/stats/
+Response: {
+  "total_analyzed": 10,
+  "phishing_detected": 2,
+  "suspicious_emails": 3,
+  "safe_emails": 5,
+  "average_risk_score": 41
+}
+```
+
+### Admin Endpoints (Auth Required)
+
+```text
+GET    /api/detection/admin/session/
+GET    /api/detection/admin/users/
+GET    /api/detection/admin/analytics/?days=30
+GET    /api/detection/admin/alerts/?days=30
+GET    /api/detection/admin/logs/?limit=100
+GET    /api/detection/admin/reports/download/?days=30
+GET    /api/detection/admin/model-versions/
+POST   /api/detection/admin/model-versions/
+POST   /api/detection/admin/model-versions/{id}/activate/
+GET    /api/detection/admin/rules/
+POST   /api/detection/admin/rules/
+PATCH  /api/detection/admin/rules/{id}/
 ```
 
 ## Running Tests
@@ -226,6 +227,21 @@ python manage.py test --verbosity=2
 # Run and keep test database
 python manage.py test --keepdb
 ```
+
+## Experimental Evaluation (Final Year Report)
+
+To generate model comparison, confusion matrix, precision, recall, and F1 score:
+
+```bash
+python ml_model/evaluate_models.py --dataset path/to/your_dataset.csv
+```
+
+Outputs are written under `backend/ml_model/experiments/` as:
+- JSON metrics file
+- Markdown report section ready to paste into your documentation
+
+Reference protocol and accepted dataset columns:
+- `backend/ml_model/EVALUATION_PROTOCOL.md`
 
 ## Security Considerations
 
